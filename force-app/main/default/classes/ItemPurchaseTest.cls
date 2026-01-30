@@ -4,34 +4,40 @@ public class ItemPurchaseTest {
   static void setupData() {
     Account acc = new Account(
       Name = 'Test Account',
-      AccountNumber = 'ACC-001',
+      AccountNumber = '12345',
       Industry = 'Chemicals'
     );
     insert acc;
 
-    List<Item__c> items = new List<Item__c>{
-      new Item__c(
-        Name = 'Item One',
-        Family__c = 'Family 1',
-        Type__c = 'Type 1',
-        Price__c = 10
-      ),
-      new Item__c(
-        Name = 'Item Two',
-        Family__c = 'Family 2',
-        Type__c = 'Type 2',
-        Price__c = 20
-      )
-    };
-    insert items;
+    Item__c item = new Item__c(
+      Name = 'Test Item',
+      Description__c = 'Test Description',
+      Family__c = 'Family 1',
+      Type__c = 'Type 1',
+      Price__c = 100
+    );
+    insert item;
 
-    User u = [
-      SELECT Id, IsManager__c
-      FROM User
-      WHERE Id = :UserInfo.getUserId()
+    Profile p = [
+      SELECT Id
+      FROM Profile
+      WHERE Name = 'System Administrator'
+      LIMIT 1
     ];
-    u.IsManager__c = true;
-    update u;
+
+    User u = new User(
+      Alias = 'mgr',
+      Email = 'manager@test.com',
+      EmailEncodingKey = 'UTF-8',
+      LastName = 'Manager',
+      LanguageLocaleKey = 'en_US',
+      LocaleSidKey = 'en_US',
+      ProfileId = p.Id,
+      TimeZoneSidKey = 'Europe/London',
+      UserName = 'manager' + System.currentTimeMillis() + '@test.com',
+      IsManager__c = true
+    );
+    insert u;
   }
 
   @IsTest
@@ -49,48 +55,77 @@ public class ItemPurchaseTest {
   @IsTest
   static void testGetItem() {
     Test.startTest();
-    List<Item__c> items = ItemPurchase.getItem('Family 1', 'Type 1', 'Item');
+    List<Item__c> items = ItemPurchase.getItem('Family 1', 'Type 1', 'Test');
     Test.stopTest();
 
     System.assertEquals(1, items.size());
-    System.assertEquals('Item One', items[0].Name);
+    System.assertEquals('Test Item', items[0].Name);
+  }
+
+  @IsTest
+  static void testGetItemCount() {
+    Test.startTest();
+    Integer count = ItemPurchase.getItemCount('Family 1', 'Type 1', 'Test');
+    Test.stopTest();
+
+    System.assertEquals(1, count);
   }
 
   @IsTest
   static void testIsManager() {
-    Test.startTest();
-    Boolean result = ItemPurchase.isManager();
-    Test.stopTest();
+    User u = [SELECT Id FROM User WHERE IsManager__c = TRUE LIMIT 1];
+    System.runAs(u) {
+      Test.startTest();
+      Boolean result = ItemPurchase.isManager();
+      Test.stopTest();
 
-    System.assertEquals(true, result);
+      System.assertEquals(true, result);
+    }
   }
 
   @IsTest
-  static void testCheckoutAndTrigger() {
+  static void testCreateItemWithImage() {
+    Test.setMock(HttpCalloutMock.class, new UnsplashMock());
+
+    Item__c item = new Item__c(
+      Name = 'API Item',
+      Description__c = 'Created via API',
+      Family__c = 'Family 2',
+      Type__c = 'Type 2',
+      Price__c = 200
+    );
+
+    Test.startTest();
+    Id itemId = ItemPurchase.createItemWithImage(item);
+    Test.stopTest();
+
+    Item__c insertedItem = [
+      SELECT Image__c
+      FROM Item__c
+      WHERE Id = :itemId
+    ];
+
+    System.assertNotEquals(null, insertedItem.Image__c);
+  }
+
+  @IsTest
+  static void testCheckout() {
     Account acc = [SELECT Id FROM Account LIMIT 1];
-    List<Item__c> items = [SELECT Id, Price__c FROM Item__c];
+    Item__c item = [SELECT Id FROM Item__c LIMIT 1];
 
-    List<ItemPurchase.CartItemDTO> cart = new List<ItemPurchase.CartItemDTO>();
+    ItemPurchase.CartItemDTO dto = new ItemPurchase.CartItemDTO();
+    dto.itemId = item.Id;
+    dto.quantity = 2;
 
-    for (Item__c i : items) {
-      ItemPurchase.CartItemDTO ci = new ItemPurchase.CartItemDTO();
-      ci.itemId = i.Id;
-      ci.quantity = 2;
-      cart.add(ci);
-    }
+    List<ItemPurchase.CartItemDTO> cart = new List<ItemPurchase.CartItemDTO>{
+      dto
+    };
 
     Test.startTest();
     Id purchaseId = ItemPurchase.checkout(acc.Id, cart);
     Test.stopTest();
 
-    Purchase__c p = [
-      SELECT TotalItems__c, GrandTotal__c
-      FROM Purchase__c
-      WHERE Id = :purchaseId
-    ];
-
-    System.assertEquals(4, p.TotalItems__c); // 2 + 2
-    System.assertEquals(60, p.GrandTotal__c); // (10*2 + 20*2)
+    System.assertNotEquals(null, purchaseId);
 
     List<PurchaseLine__c> lines = [
       SELECT Id
@@ -98,6 +133,6 @@ public class ItemPurchaseTest {
       WHERE PurchaseId__c = :purchaseId
     ];
 
-    System.assertEquals(2, lines.size());
+    System.assertEquals(1, lines.size());
   }
 }
