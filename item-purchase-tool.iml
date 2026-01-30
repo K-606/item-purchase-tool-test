@@ -6,5 +6,16 @@
       <sourceFolder url="file://$MODULE_DIR$/scripts" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module-library">
+      <library name="built-in-stubs.jar">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/.jetforcer/built-in-stubs.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="jar://$MODULE_DIR$/.jetforcer/built-in-stubs.jar!/" />
+        </SOURCES>
+      </library>
+    </orderEntry>
   </component>
 </module>

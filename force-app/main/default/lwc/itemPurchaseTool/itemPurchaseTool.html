@@ -1,1 +1,246 @@
-<template> </template>
+<template>
+  <lightning-card title="Item Purchase Tool">
+    <template if:true={isManager}>
+      <lightning-button
+        label="Create Item"
+        variant="brand"
+        onclick={openCreateItem}
+        class="slds-m-bottom_medium"
+      >
+      </lightning-button>
+    </template>
+
+    <template if:true={account}>
+      <div class="slds-p-around_small">
+        <strong>{account.Name}</strong><br />
+        {account.AccountNumber} · {account.Industry}
+      </div>
+    </template>
+
+    <lightning-button
+      label={cartLabel}
+      icon-name="utility:cart"
+      onclick={openCart}
+      class="slds-m-bottom_small"
+    >
+    </lightning-button>
+
+    <lightning-input
+      type="search"
+      label="Search items"
+      value={searchItem}
+      onchange={handleSearch}
+    >
+    </lightning-input>
+
+    <div class="slds-text-body_small slds-m-bottom_x-small">
+      Items found: <strong>{itemCount}</strong>
+    </div>
+
+    <div class="slds-grid slds-gutters slds-p-around_small">
+      <div class="slds-col">
+        <lightning-combobox
+          label="Family"
+          value={family}
+          options={familyOp}
+          onchange={handleFamily}
+        >
+        </lightning-combobox>
+      </div>
+
+      <div class="slds-col">
+        <lightning-combobox
+          label="Type"
+          value={type}
+          options={typeOp}
+          onchange={handleType}
+        >
+        </lightning-combobox>
+      </div>
+    </div>
+
+    <lightning-card title="Items">
+      <template for:each={items} for:item="item">
+        <div key={item.Id} class="slds-box slds-m-bottom_small">
+          <p class="slds-text-heading_small">{item.Name}</p>
+
+          <div class="slds-m-top_x-small">
+            <lightning-button
+              label="Details"
+              size="small"
+              data-id={item.Id}
+              onclick={openDetails}
+            >
+            </lightning-button>
+
+            <lightning-button
+              label="Add"
+              size="small"
+              variant="brand"
+              data-id={item.Id}
+              onclick={addToCart}
+              class="slds-m-left_x-small"
+            >
+            </lightning-button>
+          </div>
+        </div>
+      </template>
+    </lightning-card>
+
+    <template if:true={isOpen}>
+      <section role="dialog" class="slds-modal slds-fade-in-open">
+        <div class="slds-modal__container">
+          <header class="slds-modal__header">
+            <h2 class="slds-text-heading_medium">{select.Name}</h2>
+          </header>
+
+          <div class="slds-modal__content slds-p-around_medium">
+            <template if:true={select.Image__c}>
+              <img
+                src={select.Image__c}
+                alt={select.Name}
+                style="max-width: 100%; margin-bottom: 1rem"
+              />
+            </template>
+
+            <lightning-record-view-form
+              record-id={select.Id}
+              object-api-name="Item__c"
+            >
+              <lightning-output-field
+                field-name="Name"
+              ></lightning-output-field>
+              <lightning-output-field
+                field-name="Description__c"
+              ></lightning-output-field>
+              <lightning-output-field
+                field-name="Family__c"
+              ></lightning-output-field>
+              <lightning-output-field
+                field-name="Type__c"
+              ></lightning-output-field>
+              <lightning-output-field
+                field-name="Price__c"
+              ></lightning-output-field>
+            </lightning-record-view-form>
+          </div>
+
+          <footer class="slds-modal__footer">
+            <lightning-button label="Close" onclick={closeDetails}>
+            </lightning-button>
+          </footer>
+        </div>
+      </section>
+      <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <template if:true={isCartOpen}>
+      <section role="dialog" class="slds-modal slds-fade-in-open">
+        <div class="slds-modal__container">
+          <header class="slds-modal__header">
+            <h2 class="slds-text-heading_medium">Cart</h2>
+          </header>
+
+          <div class="slds-modal__content slds-p-around_medium">
+            <template if:true={cart.length}>
+              <lightning-datatable
+                key-field="Id"
+                data={cart}
+                columns={cartColumns}
+                hide-checkbox-column
+                onrowaction={handleCartRowAction}
+              >
+              </lightning-datatable>
+            </template>
+
+            <template if:false={cart.length}>
+              <p>Your cart is empty.</p>
+            </template>
+
+            <template if:false={cart.length}>
+              <p>Your cart is empty.</p>
+            </template>
+          </div>
+
+          <footer class="slds-modal__footer">
+            <lightning-button label="Close" onclick={closeCart}>
+            </lightning-button>
+
+            <lightning-button
+              label="Checkout"
+              variant="brand"
+              onclick={handleCheckout}
+            >
+              disabled={isCheckoutDisabled}>
+            </lightning-button>
+          </footer>
+        </div>
+      </section>
+      <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <template if:true={isCreateItemOpen}>
+      <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+        <div class="slds-modal__container">
+          <header class="slds-modal__header">
+            <h2 class="slds-text-heading_medium">Create Item</h2>
+          </header>
+
+          <div class="slds-modal__content slds-p-around_medium">
+            <lightning-input
+              label="Name"
+              value={newItemName}
+              onchange={handleName}
+            >
+            </lightning-input>
+
+            <lightning-input
+              label="Description"
+              value={newItemDesc}
+              onchange={handleDesc}
+            >
+            </lightning-input>
+
+            <lightning-combobox
+              label="Family"
+              value={newItemFamily}
+              options={familyOp}
+              onchange={handleFamilyNew}
+            >
+            </lightning-combobox>
+
+            <lightning-combobox
+              label="Type"
+              value={newItemType}
+              options={typeOp}
+              onchange={handleTypeNew}
+            >
+            </lightning-combobox>
+
+            <lightning-input
+              type="number"
+              label="Price"
+              value={newItemPrice}
+              onchange={handlePrice}
+            >
+            </lightning-input>
+
+            <div class="slds-m-top_medium">
+              <lightning-button label="Save" variant="brand" onclick={saveItem}>
+              </lightning-button>
+
+              <lightning-button
+                label="Cancel"
+                onclick={closeCreateItem}
+                class="slds-m-left_small"
+              >
+              </lightning-button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+  </lightning-card>
+</template>

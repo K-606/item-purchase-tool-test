@@ -4,5 +4,9 @@
         <members>*</members>
         <name>CustomObject</name>
     </types>
+    <types>
+        <members>User.IsManager__c</members>
+        <name>CustomField</name>
+    </types>
     <version>59.0</version>
 </Package>
